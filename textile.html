@@ -1,0 +1,1136 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enterprise Multi-Party Accounting & ERP System (Firestore Integrated)</title>
+    <!-- html2pdf & SheetJS Libraries for Exporting -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f2f5; padding: 15px; color: #333; }
+        .container { max-width: 1500px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); }
+        
+        .header { text-align: center; border-bottom: 2px solid #0056b3; padding-bottom: 15px; margin-bottom: 20px; position: relative; }
+        .header h1 { color: #0056b3; font-size: 22px; font-weight: bold; }
+        .header p { font-size: 13px; color: #666; margin-top: 4px; }
+        
+        .user-info-bar { position: absolute; right: 0; top: 0; display: flex; align-items: center; gap: 8px; background: #e2e8f0; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; }
+
+        /* Control Panel Styles */
+        .control-panel { display: flex; flex-wrap: wrap; gap: 12px; background: #f8fafc; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #e2e8f0; justify-content: space-between; align-items: center; }
+        .control-group { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+        .control-group label { font-size: 12px; font-weight: bold; color: #475569; }
+        .control-group select, .control-group input { padding: 8px 10px; font-size: 13px; border: 1px solid #cbd5e1; border-radius: 6px; outline: none; background: #fff; }
+
+        .btn { padding: 8px 14px; font-weight: bold; font-size: 12px; border-radius: 6px; cursor: pointer; border: none; transition: 0.2s; display: inline-flex; align-items: center; gap: 5px; }
+        .btn-primary { background-color: #0056b3; color: white; }
+        .btn-primary:hover { background-color: #004085; }
+        .btn-success { background-color: #10b981; color: white; }
+        .btn-success:hover { background-color: #059669; }
+        .btn-warning { background-color: #f59e0b; color: white; }
+        .btn-warning:hover { background-color: #d97706; }
+        .btn-danger { background-color: #ef4444; color: white; }
+        .btn-danger:hover { background-color: #dc2626; }
+        .btn-secondary { background-color: #64748b; color: white; }
+        .btn-excel { background-color: #1f7244; color: white; }
+        .btn-excel:hover { background-color: #154c2d; }
+        .btn-purple { background-color: #8b5cf6; color: white; }
+        .btn-purple:hover { background-color: #7c3aed; }
+
+        .form-card { background: #eef4fb; padding: 18px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #d0e1f9; }
+        .form-card h3 { font-size: 15px; color: #0056b3; margin-bottom: 12px; }
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; }
+        
+        .field { display: flex; flex-direction: column; }
+        .field label { font-size: 11px; font-weight: bold; color: #334155; margin-bottom: 4px; }
+        .field input, .field select { padding: 7px 10px; font-size: 12px; border: 1px solid #cbd5e1; border-radius: 6px; outline: none; background: #fff; width: 100%; }
+        .field input:focus, .field select:focus { border-color: #0056b3; box-shadow: 0 0 0 2px rgba(0,86,179,0.1); }
+
+        .form-actions { grid-column: 1 / -1; display: flex; gap: 10px; justify-content: flex-end; margin-top: 5px; }
+
+        /* Login Screen & Overlay Modal */
+        .login-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(5px); z-index: 2000; display: flex; justify-content: center; align-items: center; }
+        .login-box { background: #ffffff; padding: 30px; border-radius: 12px; width: 90%; max-width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); text-align: center; }
+        .login-box h2 { color: #0056b3; margin-bottom: 20px; font-size: 20px; }
+        .login-box .field { text-align: left; margin-bottom: 15px; }
+
+        /* Modal Pop-up CSS */
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); justify-content: center; align-items: center; }
+        .modal-content { background: #fff; padding: 20px; border-radius: 10px; width: 95%; max-width: 750px; max-height: 90vh; overflow-y: auto; box-shadow: 0 5px 20px rgba(0,0,0,0.2); position: relative; animation: fadeIn 0.3s; }
+        .modal-content h3 { color: #0056b3; margin-bottom: 15px; font-size: 16px; }
+        .close-btn { position: absolute; right: 15px; top: 15px; font-size: 20px; font-weight: bold; color: #aaa; cursor: pointer; }
+        .close-btn:hover { color: #000; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Printable Area CSS */
+        #printableArea { background: white; padding: 10px; border-radius: 6px; }
+        
+        .table-wrapper { overflow-x: auto; margin-top: 10px; border-radius: 8px; border: 1px solid #e2e8f0; }
+        table { width: 100%; border-collapse: collapse; font-size: 11px; white-space: nowrap; background: #fff; }
+        th, td { border: 1px solid #cbd5e1; padding: 8px 6px; text-align: center; }
+        th { background-color: #0056b3; color: white; font-weight: 600; font-size: 10px; text-transform: uppercase; }
+        tr:nth-child(even) { background-color: #f8fafc; }
+        tr:hover { background-color: #f1f5f9; }
+
+        .text-left { text-align: left; }
+        .text-right { text-align: right; }
+        .dr-text { font-weight: bold; color: #10b981; }
+        .cr-text { font-weight: bold; color: #ef4444; }
+        
+        .footer-summary { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; margin-top: 15px; padding: 12px 15px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; font-weight: bold; font-size: 13px; gap: 10px; }
+        .summary-details { display: flex; flex-wrap: wrap; gap: 20px; }
+
+        .action-btns { display: flex; gap: 4px; justify-content: center; }
+        .btn-sm { padding: 4px 8px; font-size: 11px; border-radius: 4px; }
+
+        .party-checkboxes { display: flex; flex-wrap: wrap; gap: 10px; padding: 10px; background: #f1f5f9; border-radius: 6px; max-height: 120px; overflow-y: auto; }
+        .party-checkboxes label { font-size: 12px; font-weight: normal; cursor: pointer; display: flex; align-items: center; gap: 4px; }
+
+        .status-badge { font-size: 11px; padding: 2px 8px; border-radius: 10px; background: #10b981; color: white; margin-left: 5px; }
+
+        /* Mobile Adjustments */
+        @media (max-width: 768px) {
+            body { padding: 8px; }
+            .container { padding: 12px; }
+            .header h1 { font-size: 18px; }
+            .user-info-bar { position: relative; margin-bottom: 10px; justify-content: space-between; width: 100%; border-radius: 6px; }
+            .form-grid { grid-template-columns: repeat(2, 1fr); }
+            .control-panel { flex-direction: column; align-items: stretch; }
+            .control-group { justify-content: space-between; }
+            .footer-summary { flex-direction: column; align-items: stretch; text-align: center; }
+            .summary-details { justify-content: space-between; width: 100%; }
+        }
+
+        @media print {
+            .form-card, .control-panel, .action-btns, .action-col, .footer-btns, .backup-section, .user-info-bar { display: none !important; }
+            body { background: white; padding: 0; }
+            .container { box-shadow: none; border: none; width: 100%; padding: 0; }
+            .table-wrapper { border: none; overflow: visible; }
+            table { width: 100% !important; font-size: 9px; }
+            th, td { padding: 4px 2px; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Login Modal Overlay -->
+<div id="loginOverlay" class="login-overlay">
+    <div class="login-box">
+        <h2>🔒 ERP Cloud System Login</h2>
+        <div class="field">
+            <label>Username (ইউজারনেম)</label>
+            <input type="text" id="loginUsername" placeholder="Enter username">
+        </div>
+        <div class="field">
+            <label>Password (পাসওয়ার্ড)</label>
+            <input type="password" id="loginPassword" placeholder="Enter password">
+        </div>
+        <button class="btn btn-primary" style="width: 100%; justify-content: center; padding: 10px; margin-top: 10px;" onclick="handleLogin()">Login to Account</button>
+        <p style="font-size: 11px; color: #64748b; margin-top: 15px;">Default Admin Login: <b>admin</b> | Password: <b>admin123</b></p>
+    </div>
+</div>
+
+<div class="container" id="mainContainer" style="display:none;">
+    <div id="printableArea">
+        <div class="header">
+            <div class="user-info-bar">
+                <span>👤 User: <span id="displayLoggedUser">admin</span> (<span id="displayLoggedRole">Admin</span>)</span>
+                <button class="btn btn-warning btn-sm" onclick="openPassChangeModal()">🔑 Password</button>
+                <button class="btn btn-danger btn-sm" onclick="handleLogout()">Logout</button>
+            </div>
+            <h1>COMPANY ACCOUNTING & ERP LEDGER SYSTEM</h1>
+            <p>Complete Cloud Enterprise Solution: Inventory, Invoicing & Multi-Party Management <span class="status-badge" id="cloudStatus">🔥 Firestore Connected</span></p>
+            <h2 id="currentPartyTitle" style="color: #d9534f; font-size: 16px; margin-top: 6px;">Party: Select or Create Ledger</h2>
+        </div>
+
+        <!-- Control Panel -->
+        <div class="control-panel">
+            <div class="control-group">
+                <label>Party Directory:</label>
+                <select id="partySelect" onchange="switchParty()">
+                    <!-- Dynamic Parties -->
+                </select>
+                <span id="createPartySpan">
+                    <input type="text" id="newPartyName" placeholder="New Party/Company">
+                    <button class="btn btn-primary btn-sm" onclick="createNewParty()">+ Create Party</button>
+                </span>
+            </div>
+
+            <div class="control-group" id="managerControls">
+                <button class="btn btn-purple btn-sm" onclick="openUserModal()">👥 Customer / User Management</button>
+            </div>
+
+            <div class="control-group">
+                <label>Date Range (তারিখ রেঞ্জ):</label>
+                <input type="date" id="fromDate" onchange="renderTable()" title="From Date">
+                <span>to</span>
+                <input type="date" id="toDate" onchange="renderTable()" title="To Date">
+                <button class="btn btn-secondary btn-sm" onclick="clearDateFilter()" title="Clear Range">Reset</button>
+            </div>
+        </div>
+
+        <!-- Backup & Restore System Bar -->
+        <div class="control-panel backup-section" id="backupSection" style="background: #e2e8f0; margin-top: -5px;">
+            <div class="control-group">
+                <label>Data Backup & Security:</label>
+                <button class="btn btn-secondary btn-sm" onclick="exportDataBackup()">📥 Download JSON</button>
+                <input type="file" id="importFile" accept=".json" style="display:none;" onchange="importDataBackup(event)">
+                <button class="btn btn-secondary btn-sm" onclick="document.getElementById('importFile').click()">📤 Restore JSON</button>
+            </div>
+        </div>
+
+        <!-- Main Data Entry Form -->
+        <div class="form-card" id="entryFormCard">
+            <h3>Invoice & Voucher Entry</h3>
+            <div class="form-grid">
+                <div class="field">
+                    <label>Invoice Date</label>
+                    <input type="date" id="invDate">
+                </div>
+                <div class="field">
+                    <label>Particulars</label>
+                    <input type="text" id="particulars" placeholder="e.g. Sales / Bank / Cash">
+                </div>
+                <div class="field">
+                    <label>Invoice No</label>
+                    <input type="text" id="invNo" placeholder="000000">
+                </div>
+                <div class="field">
+                    <label>Voucher Type</label>
+                    <select id="voucherType">
+                        <option value="Sale">Sale Voucher</option>
+                        <option value="Purchase">Purchase Voucher</option>
+                        <option value="Receipt">Receipt Voucher</option>
+                        <option value="Payment">Payment Voucher</option>
+                        <option value="Journal">Journal Voucher</option>
+                        <option value="Opening">Opening Balance</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label>Debit (৳)</label>
+                    <input type="number" id="debit" value="0" step="any" oninput="manualDebitChange()">
+                </div>
+                <div class="field">
+                    <label>Credit (৳)</label>
+                    <input type="number" id="credit" value="0" step="any">
+                </div>
+                <div class="field">
+                    <label>Item Description</label>
+                    <input type="text" id="item" placeholder="Fabric / Yarn / Product">
+                </div>
+                <div class="field">
+                    <label>Packing</label>
+                    <input type="text" id="packing" placeholder="Bales / Roll">
+                </div>
+                <div class="field">
+                    <label>Qty (Quantity)</label>
+                    <input type="number" id="qty" value="0" oninput="calculateDebit()">
+                </div>
+                <div class="field">
+                    <label>Free Qty</label>
+                    <input type="number" id="free" value="0">
+                </div>
+                <div class="field">
+                    <label>Rate (৳)</label>
+                    <input type="number" id="rate" value="0" step="any" oninput="calculateDebit()">
+                </div>
+                <div class="field">
+                    <label>Tax (৳)</label>
+                    <input type="number" id="tax" value="0" step="any" oninput="calculateDebit()">
+                </div>
+                <div class="field">
+                    <label>Discount (৳)</label>
+                    <input type="number" id="discount" value="0" step="any" oninput="calculateDebit()">
+                </div>
+                <div class="form-actions">
+                    <button class="btn btn-success" id="addBtn" onclick="addTransaction()">+ Add Entry</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Table Section -->
+        <div class="table-wrapper">
+            <table id="ledgerTable">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Particulars</th>
+                        <th>Inv No</th>
+                        <th>Type</th>
+                        <th>Debit (৳)</th>
+                        <th>Credit (৳)</th>
+                        <th>Item</th>
+                        <th>Packing</th>
+                        <th>Qty</th>
+                        <th>Free</th>
+                        <th>Rate (৳)</th>
+                        <th>Tax (৳)</th>
+                        <th>Discount (৳)</th>
+                        <th>Balance (৳)</th>
+                        <th class="action-col">Action</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    <!-- Dynamic Rows -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Summary -->
+        <div class="footer-summary">
+            <div class="summary-details">
+                <div>Total Debit: <span id="totalDebit">0.00</span> ৳</div>
+                <div>Total Credit: <span id="totalCredit">0.00</span> ৳</div>
+                <div>Current Balance: <span id="finalBalance">0.00 DR</span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Export Actions -->
+    <div class="footer-summary footer-btns">
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <button class="btn btn-primary" onclick="downloadPDF()">📄 Download PDF (Landscape)</button>
+            <button class="btn btn-excel" onclick="exportToExcel()">📊 Download Excel (.xlsx)</button>
+            <button class="btn btn-success" onclick="shareOnWhatsApp()">📤 Share Details via WhatsApp</button>
+            <button class="btn btn-secondary" onclick="window.print()">🖨️ Print</button>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Popup Modal -->
+<div id="editModal" class="modal">
+    <div class="modal-content">
+        <span class="close-btn" onclick="closeEditModal()">&times;</span>
+        <h3>Edit Voucher Entry</h3>
+        <input type="hidden" id="editIndex">
+        <div class="form-grid">
+            <div class="field">
+                <label>Invoice Date</label>
+                <input type="date" id="editInvDate">
+            </div>
+            <div class="field">
+                <label>Particulars</label>
+                <input type="text" id="editParticulars">
+            </div>
+            <div class="field">
+                <label>Invoice No</label>
+                <input type="text" id="editInvNo">
+            </div>
+            <div class="field">
+                <label>Voucher Type</label>
+                <select id="editVoucherType">
+                    <option value="Sale">Sale Voucher</option>
+                    <option value="Purchase">Purchase Voucher</option>
+                    <option value="Receipt">Receipt Voucher</option>
+                    <option value="Payment">Payment Voucher</option>
+                    <option value="Journal">Journal Voucher</option>
+                    <option value="Opening">Opening Balance</option>
+                </select>
+            </div>
+            <div class="field">
+                <label>Debit (৳)</label>
+                <input type="number" id="editDebit" step="any">
+            </div>
+            <div class="field">
+                <label>Credit (৳)</label>
+                <input type="number" id="editCredit" step="any">
+            </div>
+            <div class="field">
+                <label>Item Description</label>
+                <input type="text" id="editItem">
+            </div>
+            <div class="field">
+                <label>Packing</label>
+                <input type="text" id="editPacking">
+            </div>
+            <div class="field">
+                <label>Qty</label>
+                <input type="number" id="editQty" oninput="calculateEditDebit()">
+            </div>
+            <div class="field">
+                <label>Free Qty</label>
+                <input type="number" id="editFree">
+            </div>
+            <div class="field">
+                <label>Rate (৳)</label>
+                <input type="number" id="editRate" step="any" oninput="calculateEditDebit()">
+            </div>
+            <div class="field">
+                <label>Tax (৳)</label>
+                <input type="number" id="editTax" step="any" oninput="calculateEditDebit()">
+            </div>
+            <div class="field">
+                <label>Discount (৳)</label>
+                <input type="number" id="editDiscount" step="any" oninput="calculateEditDebit()">
+            </div>
+            <div class="form-actions">
+                <button class="btn btn-warning" onclick="updateTransaction()">Save Changes</button>
+                <button class="btn btn-danger" onclick="closeEditModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- User & Customer Management Modal -->
+<div id="userModal" class="modal">
+    <div class="modal-content">
+        <span class="close-btn" onclick="closeUserModal()">&times;</span>
+        <h3>User & Customer Access Management</h3>
+        
+        <div class="form-card" style="background: #f8fafc; border: 1px solid #cbd5e1;">
+            <h4>Create New User / Customer Account</h4>
+            <div class="form-grid" style="margin-top: 10px;">
+                <div class="field">
+                    <label>Username</label>
+                    <input type="text" id="newUsername" placeholder="e.g. customer1">
+                </div>
+                <div class="field">
+                    <label>Password</label>
+                    <input type="text" id="newUserPassword" placeholder="e.g. 123456">
+                </div>
+                <div class="field">
+                    <label>User Role</label>
+                    <select id="newUserRole">
+                        <option value="Customer">Customer (View & Download Only)</option>
+                        <option value="Accountant">Accountant (Entry & Edit)</option>
+                        <option value="Manager">Manager (User & Ledger Management)</option>
+                        <option value="Admin">Admin (Full Control)</option>
+                    </select>
+                </div>
+                <div class="field" style="grid-column: 1 / -1;">
+                    <label>Assign Allowed Parties (পার্টি পারমিশন নির্বাচন করুন):</label>
+                    <div id="partyCheckboxes" class="party-checkboxes">
+                        <!-- Checkboxes populated dynamically -->
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button class="btn btn-success" onclick="createNewUserAccount()">+ Create Account</button>
+                </div>
+            </div>
+        </div>
+
+        <h4 style="margin-top: 15px; margin-bottom: 8px; color: #0056b3;">Registered Accounts List</h4>
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Username</th>
+                        <th>Password</th>
+                        <th>Role</th>
+                        <th>Assigned Parties</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="userTableBody">
+                    <!-- Dynamic Users List -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Change Password Modal -->
+<div id="passChangeModal" class="modal">
+    <div class="modal-content" style="max-width: 400px;">
+        <span class="close-btn" onclick="closePassChangeModal()">&times;</span>
+        <h3>🔑 Change Password</h3>
+        <div class="field" style="margin-top: 15px;">
+            <label>New Password (নতুন পাসওয়ার্ড)</label>
+            <input type="password" id="changePassInput" placeholder="Enter new password">
+        </div>
+        <div class="form-actions" style="margin-top: 15px;">
+            <button class="btn btn-warning" onclick="saveNewPassword()">Update Password</button>
+            <button class="btn btn-secondary" onclick="closePassChangeModal()">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<!-- Firebase SDK (Modular Version 9/10) -->
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+    // TODO: Replace with your actual Firebase Project Configuration
+    const firebaseConfig = {
+        apiKey: "AIzaSyB7piwZT4syxspxRtXM0uWF8lbhagzsEUw",
+  authDomain: "debit-and-credit-191cf.firebaseapp.com",
+  projectId: "debit-and-credit-191cf",
+  storageBucket: "debit-and-credit-191cf.firebasestorage.app",
+  messagingSenderId: "753561295277",
+  appId: "1:753561295277:web:b95214d4c2324b2ea62924",
+  measurementId: "G-NPBW37PE89"
+};
+
+    // Initialize Firebase & Firestore
+    let app, dbStore;
+    try {
+        app = initializeApp(firebaseConfig);
+        dbStore = getFirestore(app);
+    } catch(e) {
+        console.warn("Firebase not configured yet or offline mode.");
+    }
+
+    let db = JSON.parse(localStorage.getItem('companyLedgerDB')) || {};
+    let usersDB = JSON.parse(localStorage.getItem('companyUsersDB')) || [
+        { username: 'admin', password: 'admin123', role: 'Admin', assignedParties: ['ALL'] }
+    ];
+
+    let currentUser = null;
+    let currentParty = '';
+    let isManualDebit = false;
+
+    // Realtime Firestore Listener
+    function setupFirestoreSync() {
+        if (!dbStore) return;
+
+        // Sync Ledger Database
+        onSnapshot(doc(dbStore, "companyERP", "ledgerData"), (docSnap) => {
+            if (docSnap.exists()) {
+                db = docSnap.data().data || {};
+                localStorage.setItem('companyLedgerDB', JSON.stringify(db));
+                if (currentUser) initSystem();
+            }
+        });
+
+        // Sync Users Database
+        onSnapshot(doc(dbStore, "companyERP", "usersData"), (docSnap) => {
+            if (docSnap.exists()) {
+                usersDB = docSnap.data().users || [];
+                localStorage.setItem('companyUsersDB', JSON.stringify(usersDB));
+                if (currentUser) {
+                    let updatedSelf = usersDB.find(u => u.username === currentUser.username);
+                    if (updatedSelf) currentUser = updatedSelf;
+                    renderUserManagement();
+                }
+            }
+        });
+    }
+
+    async function syncToCloud() {
+        localStorage.setItem('companyLedgerDB', JSON.stringify(db));
+        localStorage.setItem('companyUsersDB', JSON.stringify(usersDB));
+
+        if (dbStore) {
+            try {
+                await setDoc(doc(dbStore, "companyERP", "ledgerData"), { data: db });
+                await setDoc(doc(dbStore, "companyERP", "usersData"), { users: usersDB });
+            } catch (e) {
+                console.error("Firestore sync error: ", e);
+            }
+        }
+    }
+
+    // Attach Functions to Global Scope
+    window.handleLogin = function() {
+        let uInput = document.getElementById('loginUsername').value.trim();
+        let pInput = document.getElementById('loginPassword').value.trim();
+
+        let foundUser = usersDB.find(u => u.username === uInput && u.password === pInput);
+
+        if (foundUser) {
+            currentUser = foundUser;
+            document.getElementById('loginOverlay').style.display = 'none';
+            document.getElementById('mainContainer').style.display = 'block';
+            document.getElementById('displayLoggedUser').innerText = currentUser.username;
+            document.getElementById('displayLoggedRole').innerText = currentUser.role;
+            
+            initSystem();
+        } else {
+            alert('ভুল ইউজারনেম বা পাসওয়ার্ড দেওয়া হয়েছে!');
+        }
+    }
+
+    window.handleLogout = function() {
+        currentUser = null;
+        document.getElementById('loginOverlay').style.display = 'flex';
+        document.getElementById('mainContainer').style.display = 'none';
+        document.getElementById('loginUsername').value = '';
+        document.getElementById('loginPassword').value = '';
+    }
+
+    function initSystem() {
+        const partySelect = document.getElementById('partySelect');
+        partySelect.innerHTML = '';
+
+        const partyNames = Object.keys(db);
+        if (partyNames.length === 0) {
+            db['AYAAN TEX'] = [];
+            syncToCloud();
+        }
+
+        let allowedParties = [];
+        if (currentUser.role === 'Admin' || currentUser.role === 'Manager' || (currentUser.assignedParties && currentUser.assignedParties.includes('ALL'))) {
+            allowedParties = Object.keys(db);
+        } else {
+            allowedParties = Object.keys(db).filter(p => currentUser.assignedParties && currentUser.assignedParties.includes(p));
+        }
+
+        if (allowedParties.length === 0) {
+            alert('আপনার অ্যাকাউন্টে কোনো পার্টির অ্যাক্সেস দেওয়া নেই। অনুগ্রহ করে ম্যানেজারের সাথে যোগাযোগ করুন।');
+            partySelect.innerHTML = '<option value="">No Access</option>';
+            document.getElementById('currentPartyTitle').innerText = 'Party: No Access Assigned';
+            renderTable();
+            return;
+        }
+
+        allowedParties.forEach(name => {
+            const opt = document.createElement('option');
+            opt.value = name;
+            opt.innerText = name;
+            partySelect.appendChild(opt);
+        });
+
+        currentParty = partySelect.value || allowedParties[0];
+        partySelect.value = currentParty;
+        document.getElementById('currentPartyTitle').innerText = 'Party: ' + currentParty;
+        
+        applyRolePermissions();
+        renderTable();
+    }
+
+    function applyRolePermissions() {
+        let role = currentUser.role;
+        let entryForm = document.getElementById('entryFormCard');
+        let managerControls = document.getElementById('managerControls');
+        let backupSection = document.getElementById('backupSection');
+        let createPartySpan = document.getElementById('createPartySpan');
+
+        if (role === 'Customer') {
+            entryForm.style.display = 'none';
+            managerControls.style.display = 'none';
+            backupSection.style.display = 'none';
+            createPartySpan.style.display = 'none';
+        } else if (role === 'Accountant') {
+            entryForm.style.display = 'block';
+            managerControls.style.display = 'none';
+            backupSection.style.display = 'none';
+            createPartySpan.style.display = 'inline-block';
+        } else if (role === 'Manager' || role === 'Admin') {
+            entryForm.style.display = 'block';
+            managerControls.style.display = 'flex';
+            backupSection.style.display = 'flex';
+            createPartySpan.style.display = 'inline-block';
+        }
+    }
+
+    window.createNewParty = function() {
+        if (currentUser.role === 'Customer') return;
+
+        const nameInput = document.getElementById('newPartyName').value.trim();
+        if (!nameInput) {
+            alert('দয়া করে পার্টির নাম লিখুন।');
+            return;
+        }
+
+        if (db[nameInput]) {
+            alert('এই নামের পার্টি ইতিমধ্যে রয়েছে!');
+            return;
+        }
+
+        db[nameInput] = [];
+        
+        if (currentUser.assignedParties && !currentUser.assignedParties.includes('ALL')) {
+            currentUser.assignedParties.push(nameInput);
+        }
+
+        syncToCloud();
+        document.getElementById('newPartyName').value = '';
+        initSystem();
+        document.getElementById('partySelect').value = nameInput;
+        switchParty();
+    }
+
+    window.switchParty = function() {
+        currentParty = document.getElementById('partySelect').value;
+        document.getElementById('currentPartyTitle').innerText = 'Party: ' + currentParty;
+        renderTable();
+    }
+
+    window.calculateDebit = function() {
+        if (isManualDebit) return;
+
+        let qty = parseFloat(document.getElementById('qty').value) || 0;
+        let rate = parseFloat(document.getElementById('rate').value) || 0;
+        let tax = parseFloat(document.getElementById('tax').value) || 0;
+        let discount = parseFloat(document.getElementById('discount').value) || 0;
+
+        let totalDebit = (qty * rate) + tax - discount;
+        document.getElementById('debit').value = totalDebit >= 0 ? totalDebit.toFixed(2) : 0;
+    }
+
+    window.calculateEditDebit = function() {
+        let qty = parseFloat(document.getElementById('editQty').value) || 0;
+        let rate = parseFloat(document.getElementById('editRate').value) || 0;
+        let tax = parseFloat(document.getElementById('editTax').value) || 0;
+        let discount = parseFloat(document.getElementById('editDiscount').value) || 0;
+
+        let totalDebit = (qty * rate) + tax - discount;
+        document.getElementById('editDebit').value = totalDebit >= 0 ? totalDebit.toFixed(2) : 0;
+    }
+
+    window.manualDebitChange = function() {
+        isManualDebit = true;
+    }
+
+    window.clearDateFilter = function() {
+        document.getElementById('fromDate').value = '';
+        document.getElementById('toDate').value = '';
+        renderTable();
+    }
+
+    function renderTable() {
+        const tbody = document.getElementById('tableBody');
+        tbody.innerHTML = '';
+
+        if (!currentParty || !db[currentParty]) {
+            tbody.innerHTML = `<tr><td colspan="15" style="text-align:center; color:#888; padding: 20px;">কোনো ডেটা পাওয়া যায়নি বা পারমিশন নেই।</td></tr>`;
+            document.getElementById('totalDebit').innerText = "0.00";
+            document.getElementById('totalCredit').innerText = "0.00";
+            document.getElementById('finalBalance').innerText = "0.00 DR";
+            return;
+        }
+
+        let transactions = db[currentParty] || [];
+        let fromDateVal = document.getElementById('fromDate').value;
+        let toDateVal = document.getElementById('toDate').value;
+
+        let runningBalance = 0;
+        let totalDebit = 0;
+        let totalCredit = 0;
+        let displayedCount = 0;
+
+        transactions.forEach((tx, index) => {
+            runningBalance += (tx.debit - tx.credit);
+
+            // Convert DD-MM-YYYY to YYYY-MM-DD for date comparison
+            let parts = tx.date.split('-');
+            let txIsoDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
+
+            if (fromDateVal && txIsoDate < fromDateVal) {
+                return;
+            }
+            if (toDateVal && txIsoDate > toDateVal) {
+                return;
+            }
+
+            displayedCount++;
+            totalDebit += tx.debit;
+            totalCredit += tx.credit;
+
+            let balanceDisplay = Math.abs(runningBalance).toFixed(2) + (runningBalance >= 0 ? ' DR' : ' CR');
+
+            let actionButtons = (currentUser.role === 'Customer') ? '-' : `
+                <div class="action-btns">
+                    <button class="btn btn-warning btn-sm" onclick="openEditModal(${index})">Edit</button>
+                    <button class="btn btn-danger btn-sm" onclick="deleteEntry(${index})">Del</button>
+                </div>`;
+
+            let row = `<tr>
+                <td>${tx.date}</td>
+                <td class="text-left">${tx.particulars}</td>
+                <td>${tx.invNo}</td>
+                <td>${tx.voucher}</td>
+                <td class="text-right">${tx.debit > 0 ? tx.debit.toFixed(2) : '0.00'}</td>
+                <td class="text-right">${tx.credit > 0 ? tx.credit.toFixed(2) : '0.00'}</td>
+                <td class="text-left">${tx.item}</td>
+                <td>${tx.packing}</td>
+                <td>${tx.qty || ''}</td>
+                <td>${tx.free || ''}</td>
+                <td>${tx.rate > 0 ? tx.rate.toFixed(2) : ''}</td>
+                <td>${tx.tax || ''}</td>
+                <td>${tx.discount || ''}</td>
+                <td class="text-right ${runningBalance >= 0 ? 'dr-text' : 'cr-text'}">${balanceDisplay}</td>
+                <td class="action-col">${actionButtons}</td>
+            </tr>`;
+
+            tbody.innerHTML += row;
+        });
+
+        if (displayedCount === 0) {
+            tbody.innerHTML = `<tr><td colspan="15" style="text-align:center; color:#888; padding: 20px;">এই নির্দিষ্ট তারিখ সীমার মধ্যে কোনো ট্রানজ্যাকশন পাওয়া যায়নি।</td></tr>`;
+        }
+
+        document.getElementById('totalDebit').innerText = totalDebit.toFixed(2);
+        document.getElementById('totalCredit').innerText = totalCredit.toFixed(2);
+        document.getElementById('finalBalance').innerText = Math.abs(runningBalance).toFixed(2) + (runningBalance >= 0 ? ' DR' : ' CR');
+
+        if (currentUser.role === 'Customer') {
+            document.querySelectorAll('.action-col').forEach(el => el.style.display = 'none');
+        } else {
+            document.querySelectorAll('.action-col').forEach(el => el.style.display = '');
+        }
+    }
+
+    window.addTransaction = function() {
+        const dateInput = document.getElementById('invDate').value;
+        const particulars = document.getElementById('particulars').value;
+        
+        if (!dateInput || !particulars) {
+            alert('দয়া করে ইনভয়েস ডেট এবং পার্টিকুলারস পূরণ করুন।');
+            return;
+        }
+
+        const d = new Date(dateInput);
+        const formattedDate = String(d.getDate()).padStart(2, '0') + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + d.getFullYear();
+
+        const txData = {
+            date: formattedDate,
+            particulars: particulars,
+            invNo: document.getElementById('invNo').value,
+            voucher: document.getElementById('voucherType').value,
+            debit: parseFloat(document.getElementById('debit').value) || 0,
+            credit: parseFloat(document.getElementById('credit').value) || 0,
+            item: document.getElementById('item').value,
+            packing: document.getElementById('packing').value,
+            qty: parseInt(document.getElementById('qty').value) || 0,
+            free: parseInt(document.getElementById('free').value) || 0,
+            rate: parseFloat(document.getElementById('rate').value) || 0,
+            tax: parseFloat(document.getElementById('tax').value) || 0,
+            discount: parseFloat(document.getElementById('discount').value) || 0
+        };
+
+        if (!db[currentParty]) db[currentParty] = [];
+        db[currentParty].push(txData);
+        syncToCloud();
+        renderTable();
+        resetForm();
+    }
+
+    window.openEditModal = function(index) {
+        let tx = db[currentParty][index];
+        let parts = tx.date.split('-');
+        let isoDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
+
+        document.getElementById('editIndex').value = index;
+        document.getElementById('editInvDate').value = isoDate;
+        document.getElementById('editParticulars').value = tx.particulars;
+        document.getElementById('editInvNo').value = tx.invNo;
+        document.getElementById('editVoucherType').value = tx.voucher;
+        document.getElementById('editDebit').value = tx.debit;
+        document.getElementById('editCredit').value = tx.credit;
+        document.getElementById('editItem').value = tx.item;
+        document.getElementById('editPacking').value = tx.packing;
+        document.getElementById('editQty').value = tx.qty;
+        document.getElementById('editFree').value = tx.free;
+        document.getElementById('editRate').value = tx.rate;
+        document.getElementById('editTax').value = tx.tax;
+        document.getElementById('editDiscount').value = tx.discount;
+
+        document.getElementById('editModal').style.display = 'flex';
+    }
+
+    window.closeEditModal = function() {
+        document.getElementById('editModal').style.display = 'none';
+    }
+
+    window.updateTransaction = function() {
+        let index = parseInt(document.getElementById('editIndex').value);
+        const dateInput = document.getElementById('editInvDate').value;
+        const particulars = document.getElementById('editParticulars').value;
+
+        if (!dateInput || !particulars) {
+            alert('দয়া করে ইনভয়েস ডেট এবং পার্টিকুলারস পূরণ করুন।');
+            return;
+        }
+
+        const d = new Date(dateInput);
+        const formattedDate = String(d.getDate()).padStart(2, '0') + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + d.getFullYear();
+
+        db[currentParty][index] = {
+            date: formattedDate,
+            particulars: particulars,
+            invNo: document.getElementById('editInvNo').value,
+            voucher: document.getElementById('editVoucherType').value,
+            debit: parseFloat(document.getElementById('editDebit').value) || 0,
+            credit: parseFloat(document.getElementById('editCredit').value) || 0,
+            item: document.getElementById('editItem').value,
+            packing: document.getElementById('editPacking').value,
+            qty: parseInt(document.getElementById('editQty').value) || 0,
+            free: parseInt(document.getElementById('editFree').value) || 0,
+            rate: parseFloat(document.getElementById('editRate').value) || 0,
+            tax: parseFloat(document.getElementById('editTax').value) || 0,
+            discount: parseFloat(document.getElementById('editDiscount').value) || 0
+        };
+
+        syncToCloud();
+        closeEditModal();
+        renderTable();
+    }
+
+    function resetForm() {
+        document.getElementById('invDate').value = '';
+        document.getElementById('particulars').value = '';
+        document.getElementById('invNo').value = '';
+        document.getElementById('voucherType').value = 'Sale';
+        document.getElementById('debit').value = '0';
+        document.getElementById('credit').value = '0';
+        document.getElementById('item').value = '';
+        document.getElementById('packing').value = '';
+        document.getElementById('qty').value = '0';
+        document.getElementById('free').value = '0';
+        document.getElementById('rate').value = '0';
+        document.getElementById('tax').value = '0';
+        document.getElementById('discount').value = '0';
+        isManualDebit = false;
+    }
+
+    window.deleteEntry = function(index) {
+        if (confirm('এই এন্ট্রিটি ডিলিট করতে চান?')) {
+            db[currentParty].splice(index, 1);
+            syncToCloud();
+            renderTable();
+        }
+    }
+
+    /* User Management Functions */
+    window.openUserModal = function() {
+        renderUserManagement();
+        document.getElementById('userModal').style.display = 'flex';
+    }
+
+    window.closeUserModal = function() {
+        document.getElementById('userModal').style.display = 'none';
+    }
+
+    function renderUserManagement() {
+        const checkboxContainer = document.getElementById('partyCheckboxes');
+        checkboxContainer.innerHTML = '';
+
+        Object.keys(db).forEach(partyName => {
+            checkboxContainer.innerHTML += `
+                <label>
+                    <input type="checkbox" name="partyPerm" value="${partyName}"> ${partyName}
+                </label>
+            `;
+        });
+
+        const tbody = document.getElementById('userTableBody');
+        tbody.innerHTML = '';
+
+        usersDB.forEach((usr, idx) => {
+            let assignedText = usr.assignedParties.includes('ALL') ? 'All Parties' : usr.assignedParties.join(', ');
+            let deleteBtn = usr.username === 'admin' ? '-' : `<button class="btn btn-danger btn-sm" onclick="deleteUserAccount(${idx})">Del</button>`;
+
+            tbody.innerHTML += `
+                <tr>
+                    <td>${usr.username}</td>
+                    <td><code>${usr.password}</code></td>
+                    <td><b>${usr.role}</b></td>
+                    <td>${assignedText || 'None'}</td>
+                    <td>${deleteBtn}</td>
+                </tr>
+            `;
+        });
+    }
+
+    window.createNewUserAccount = function() {
+        let uName = document.getElementById('newUsername').value.trim();
+        let uPass = document.getElementById('newUserPassword').value.trim();
+        let uRole = document.getElementById('newUserRole').value;
+
+        if (!uName || !uPass) {
+            alert('ইউজারনেম এবং পাসওয়ার্ড প্রদান করুন!');
+            return;
+        }
+
+        if (usersDB.some(u => u.username === uName)) {
+            alert('এই ইউজারনেমটি ইতিমধ্যে তৈরি করা আছে!');
+            return;
+        }
+
+        let selectedParties = [];
+        document.querySelectorAll('input[name="partyPerm"]:checked').forEach(cb => {
+            selectedParties.push(cb.value);
+        });
+
+        if (uRole === 'Admin' || uRole === 'Manager') {
+            selectedParties = ['ALL'];
+        }
+
+        usersDB.push({
+            username: uName,
+            password: uPass,
+            role: uRole,
+            assignedParties: selectedParties
+        });
+
+        syncToCloud();
+        document.getElementById('newUsername').value = '';
+        document.getElementById('newUserPassword').value = '';
+        renderUserManagement();
+        alert('নতুন অ্যাকাউন্ট সফলভাবে তৈরি হয়েছে এবং ক্লাউডে সেভ করা হয়েছে!');
+    }
+
+    window.deleteUserAccount = function(idx) {
+        if (confirm('এই অ্যাকাউন্টটি ডিলিট করতে চান?')) {
+            usersDB.splice(idx, 1);
+            syncToCloud();
+            renderUserManagement();
+        }
+    }
+
+    /* Change Password */
+    window.openPassChangeModal = function() {
+        document.getElementById('passChangeModal').style.display = 'flex';
+    }
+
+    window.closePassChangeModal = function() {
+        document.getElementById('passChangeModal').style.display = 'none';
+    }
+
+    window.saveNewPassword = function() {
+        let newPass = document.getElementById('changePassInput').value.trim();
+        if (!newPass) {
+            alert('দয়া করে নতুন পাসওয়ার্ড লিখুন!');
+            return;
+        }
+
+        let userObj = usersDB.find(u => u.username === currentUser.username);
+        if (userObj) {
+            userObj.password = newPass;
+            currentUser.password = newPass;
+            syncToCloud();
+            alert('পাসওয়ার্ড সফলভাবে আপডেট করা হয়েছে!');
+            closePassChangeModal();
+        }
+    }
+
+    /* Backup Functions */
+    window.exportDataBackup = function() {
+        const backupPayload = { ledgerDB: db, usersDB: usersDB };
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupPayload));
+        const downloadAnchor = document.createElement('a');
+        downloadAnchor.setAttribute("href", dataStr);
+        downloadAnchor.setAttribute("download", `ERP_Cloud_Backup_${new Date().toISOString().slice(0,10)}.json`);
+        document.body.appendChild(downloadAnchor);
+        downloadAnchor.click();
+        downloadAnchor.remove();
+    }
+
+    window.importDataBackup = function(event) {
+        const fileReader = new FileReader();
+        fileReader.onload = function(e) {
+            try {
+                const importedData = JSON.parse(e.target.result);
+                if (importedData.ledgerDB && importedData.usersDB) {
+                    db = importedData.ledgerDB;
+                    usersDB = importedData.usersDB;
+                } else {
+                    db = importedData;
+                }
+                syncToCloud();
+                initSystem();
+                alert('ডাটা ব্যাকআপ ক্লাউডে সফলভাবে রিস্টোর করা হয়েছে!');
+            } catch(err) {
+                alert('ভুল ফাইল ফরম্যাট! সঠিক JSON ফাইল আপলোড করুন।');
+            }
+        };
+        fileReader.readAsText(event.target.files[0]);
+    }
+
+    /* WhatsApp & PDF & Excel Exports */
+    window.shareOnWhatsApp = function() {
+        let transactions = db[currentParty] || [];
+        let totalDebit = document.getElementById('totalDebit').innerText;
+        let totalCredit = document.getElementById('totalCredit').innerText;
+        let finalBalance = document.getElementById('finalBalance').innerText;
+
+        let text = `📋 *STATEMENT OF ACCOUNT*\n`;
+        text += `👤 *Party:* ${currentParty}\n`;
+        text += `📅 *Date:* ${new Date().toLocaleDateString('en-GB')}\n`;
+        text += `-----------------------------------\n`;
+
+        if (transactions.length === 0) {
+            text += `No transaction details available.\n`;
+        } else {
+            transactions.forEach((tx, i) => {
+                text += `*${i+1}. Date:* ${tx.date} | ${tx.particulars}\n`;
+                if(tx.invNo) text += `   Inv: ${tx.invNo} | Type: ${tx.voucher}\n`;
+                if(tx.item) text += `   Item: ${tx.item} (${tx.qty || 0} ${tx.packing || ''})\n`;
+                if(tx.debit > 0) text += `   Debit: ৳${tx.debit.toFixed(2)}\n`;
+                if(tx.credit > 0) text += `   Credit: ৳${tx.credit.toFixed(2)}\n`;
+                text += `\n`;
+            });
+        }
+
+        text += `-----------------------------------\n`;
+        text += `💵 *Total Debit:* ৳${totalDebit}\n`;
+        text += `💴 *Total Credit:* ৳${totalCredit}\n`;
+        text += `⚖️ *Current Balance:* ৳${finalBalance}\n`;
+        text += `-----------------------------------\n`;
+        text += `Generated via Enterprise ERP System`;
+
+        let encodedUrl = encodeURIComponent(text);
+        window.open(`https://api.whatsapp.com/send?text=${encodedUrl}`, '_blank');
+    }
+
+    window.downloadPDF = function() {
+        const element = document.getElementById('printableArea');
+        const actionCols = document.querySelectorAll('.action-col, .action-btns, .control-panel, .form-card, .backup-section, .user-info-bar');
+        
+        actionCols.forEach(el => el.style.display = 'none');
+
+        const opt = {
+            margin:       [0.3, 0.3, 0.3, 0.3],
+            filename:     `${currentParty}_Ledger_${new Date().toISOString().slice(0,10)}.pdf`,
+            image:        { type: 'jpeg', quality: 0.98 },
+            html2canvas:  { scale: 2, useCORS: true },
+            jsPDF:        { unit: 'in', format: 'a4', orientation: 'landscape' }
+        };
+
+        html2pdf().set(opt).from(element).save().then(() => {
+            applyRolePermissions();
+            renderTable();
+        });
+    }
+
+    window.exportToExcel = function() {
+        let transactions = db[currentParty] || [];
+        if (transactions.length === 0) {
+            alert('এক্সেল ডাউনলোড করার মতো কোনো ডাটা নেই!');
+            return;
+        }
+
+        let excelData = [];
+        let runningBalance = 0;
+
+        transactions.forEach(tx => {
+            runningBalance += (tx.debit - tx.credit);
+            excelData.push({
+                "Date": tx.date,
+                "Particulars": tx.particulars,
+                "Invoice No": tx.invNo,
+                "Voucher Type": tx.voucher,
+                "Debit (৳)": tx.debit,
+                "Credit (৳)": tx.credit,
+                "Item": tx.item,
+                "Packing": tx.packing,
+                "Qty": tx.qty,
+                "Free": tx.free,
+                "Rate (৳)": tx.rate,
+                "Tax (৳)": tx.tax,
+                "Discount (৳)": tx.discount,
+                "Balance (৳)": Math.abs(runningBalance).toFixed(2) + (runningBalance >= 0 ? ' DR' : ' CR')
+            });
+        });
+
+        const worksheet = XLSX.utils.json_to_sheet(excelData);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Ledger Report");
+
+        XLSX.writeFile(workbook, `${currentParty}_Ledger_${new Date().toISOString().slice(0,10)}.xlsx`);
+    }
+
+    // Initialize Firestore Sync
+    setupFirestoreSync();
+</script>
+
+</body>
+</html>
